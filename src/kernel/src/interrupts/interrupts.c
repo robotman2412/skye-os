@@ -28,7 +28,7 @@ static struct idt_entry idtTable[256];
 static struct lidt_struct {
 	uint16_t limit;
 	uint64_t base;
-} lidt;
+} __attribute__((packed)) lidt;
 
 void setupInterrupts() {
 	// Set interrupt defaults.
