@@ -65,8 +65,8 @@ sirq:	; Set some odd interrupt.
 onkey:	; Some interrupts.
 		in al, 0x60			; See what's going on.
 		call puthex
-		in al, 0x61			; Grab status.
-		call puthex
+		;in al, 0x61			; Grab status.
+		;call puthex
 		or al, 0x80			; Acknowledge keypress.
 		out 0x61, al
 		and al, 0x3f

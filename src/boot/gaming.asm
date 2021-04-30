@@ -40,21 +40,29 @@ entry:	; Some simple set-up.
 		
 		; Set-up for interrupts.
 		mov bx, 0x09*4		; Set onkey to run for interrupt 0x09.
-		mov gs, ax
-		mov ax, onkey
-		mov word [gs:bx], ax
-		mov word [gs:bx+2], cs
+		mov word [bx], onkey
+		mov word [bx+2], cs
+		
+		sti
 		
 		; Disable cursor.
 		mov cx, 0x2607
 		mov ah, 0x01
 		int 0x10
 		
-		sti
-		
 		call movesnek.ohno
 		
 death:	jmp death
+		
+		
+;testtest:
+;		mov ax, 0x0600
+;		xor cx, cx
+;		mov dh, tty.height				; Clear screen.
+;		mov dl, tty.width
+;		mov bh, 0xf2
+;		int 0x10
+;		iret
 		
 		
 ;sirq:	; Set some odd interrupt.
@@ -249,10 +257,11 @@ vram:	equ 0xb800	; This is the segment index of VRAM.
 isext:	db 0x00		; Is extended keycode.
 		
 rand:	equ 0x7e00	; Some shit.
+tdiv:	equ 0x7e01
 		
 tty:	; TTY cursor pos.
-		.x:			equ 0x7e01	; Variable: byte.
-		.y:			equ 0x7e02	; Variable: byte.
+		.x:			equ 0x7e02	; Variable: byte.
+		.y:			equ 0x7e03	; Variable: byte.
 		.style:		equ 0x2f
 		.width:		equ 80
 		.height:	equ 25
@@ -262,10 +271,10 @@ key:
 		.left:		equ 0x4b
 		.right:		equ 0x4d
 snek:
-		.x:			equ 0x7e03	; Variable: byte.
-		.y:			equ 0x7e04	; Variable: byte.
-		.heading:	equ 0x7e05	; Variable: byte.
-		.length:	equ 0x7e06	; Variable: word.
+		.x:			equ 0x7e04	; Variable: byte.
+		.y:			equ 0x7e05	; Variable: byte.
+		.heading:	equ 0x7e06	; Variable: byte.
+		.length:	equ 0x7e07	; Variable: word.
 		.go:		db "^v<>"
 		.food:		equ 0xffff
 		.spos:		equ (tty.width/2-1) | ((tty.height/2)<<8)
@@ -281,7 +290,7 @@ snek:
 		.memlen:	equ tty.width * tty.height * 2
 		.mem:		equ 0xa000
 		
-msg:	db "bootsnekt", 0
+msg:	db "__snek__", 0
 		
 ; ----------------------------------------- ;
 		
