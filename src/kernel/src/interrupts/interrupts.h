@@ -7,14 +7,13 @@
 #define IRQ_MODE_INTERRUPT	0x02
 #define IRQ_MODE_TRAP		0x03
 #define IRQ_MODE_DISABLED	0x00
-#define INTERRUPT_TYPE __attribute__((interrupt)) void
+#define INTERRUPT_TYPE void
 
 struct interrupt_frame {
-  uint64_t ip;
-  uint64_t cs;
-  uint64_t flags;
-  uint64_t sp;
-  uint64_t ss;
+    uint64_t rax, rbx, rcx, rdx, rbp, rsp, rsi, rdi;
+    uint64_t r8,  r9,  r10, r11, r12, r13, r14, r15;
+    uint64_t errorCode;
+    uint64_t rip, cs, rflags, rsp0, ss;
 } __attribute__((packed));
 
 struct idt_entry {
@@ -32,23 +31,6 @@ void setupInterrupts();
 void setInterrupt(struct idt_entry *idt, void(*handler)(struct interrupt_frame*), char mode);
 
 extern uint64_t irqReturnAddr;
-extern uint64_t irqErrorCode;
-extern uint64_t regtmp0;
-extern uint64_t regtmp1;
-extern uint64_t regtmp2;
-extern uint64_t regtmp3;
-extern uint64_t regtmp4;
-extern uint64_t regtmp5;
-extern uint64_t regtmp6;
-extern uint64_t regtmp7;
-extern uint64_t regtmp8;
-extern uint64_t regtmp9;
-extern uint64_t regtmp10;
-extern uint64_t regtmp11;
-extern uint64_t regtmp12;
-extern uint64_t regtmp13;
-extern uint64_t regtmp14;
-extern uint64_t regtmp15;
 
 extern void(*interruptTable[32])(void);
 
@@ -84,5 +66,38 @@ INTERRUPT_TYPE irq1CHandler(struct interrupt_frame* frame);
 INTERRUPT_TYPE irq1DHandler(struct interrupt_frame* frame);
 INTERRUPT_TYPE irq1EHandler(struct interrupt_frame* frame);
 INTERRUPT_TYPE irq1FHandler(struct interrupt_frame* frame);
+
+extern void irq00();
+extern void irq01();
+extern void irq02();
+extern void irq03();
+extern void irq04();
+extern void irq05();
+extern void irq06();
+extern void irq07();
+extern void irq08();
+extern void irq09();
+extern void irq0A();
+extern void irq0B();
+extern void irq0C();
+extern void irq0D();
+extern void irq0E();
+extern void irq0F();
+extern void irq10();
+extern void irq11();
+extern void irq12();
+extern void irq13();
+extern void irq14();
+extern void irq15();
+extern void irq16();
+extern void irq17();
+extern void irq18();
+extern void irq19();
+extern void irq1A();
+extern void irq1B();
+extern void irq1C();
+extern void irq1D();
+extern void irq1E();
+extern void irq1F();
 
 #endif //INTERRUPTS_H

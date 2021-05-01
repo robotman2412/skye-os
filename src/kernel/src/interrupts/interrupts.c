@@ -1,6 +1,7 @@
 
 #include "interrupts.h"
 #include "kernel.h"
+#include "framebuffer.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -37,37 +38,37 @@ void setupInterrupts() {
 	}
 	
 	// Division by zero.
-	setInterrupt(&idtTable[0], &irq00Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[0], &irq00, IRQ_MODE_INTERRUPT);
 	// Debug.
-	setInterrupt(&idtTable[0], &irq01Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[1], &irq01, IRQ_MODE_INTERRUPT);
 	// NMI.
-	setInterrupt(&idtTable[0], &irq02Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[2], &irq02, IRQ_MODE_INTERRUPT);
 	// Breakpoint.
-	setInterrupt(&idtTable[0], &irq03Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[3], &irq03, IRQ_MODE_INTERRUPT);
 	// Overflow.
-	setInterrupt(&idtTable[0], &irq04Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[4], &irq04, IRQ_MODE_INTERRUPT);
 	// Bound range exceeded.
-	setInterrupt(&idtTable[0], &irq05Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[5], &irq05, IRQ_MODE_INTERRUPT);
 	// Invalid opcode.
-	setInterrupt(&idtTable[0], &irq06Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[6], &irq06, IRQ_MODE_INTERRUPT);
 	// Device not available.
-	setInterrupt(&idtTable[0], &irq07Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[7], &irq07, IRQ_MODE_INTERRUPT);
 	// Double fault.
-	setInterrupt(&idtTable[0], &irq08Handler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[8], &irq08, IRQ_MODE_INTERRUPT);
 	// Coprocessor segment overrun.
-	//setInterrupt(&idtTable[0], &irq09Handler, IRQ_MODE_INTERRUPT);
+	//setInterrupt(&idtTable[9], &irq09, IRQ_MODE_INTERRUPT);
 	// Invalid TSS
-	//setInterrupt(&idtTable[0], &irq0AHandler, IRQ_MODE_INTERRUPT);
+	//setInterrupt(&idtTable[10], &irq0A, IRQ_MODE_INTERRUPT);
 	// Segment not present.
-	setInterrupt(&idtTable[0], &irq0BHandler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[11], &irq0B, IRQ_MODE_INTERRUPT);
 	// Stack-segment fault.
-	setInterrupt(&idtTable[0], &irq0CHandler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[12], &irq0C, IRQ_MODE_INTERRUPT);
 	// General protection fault.
-	setInterrupt(&idtTable[0], &irq0DHandler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[13], &irq0D, IRQ_MODE_INTERRUPT);
 	// Page fault.
-	setInterrupt(&idtTable[0], &irq0EHandler, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[14], &irq0E, IRQ_MODE_INTERRUPT);
 	// Reserved.
-	//setInterrupt(&idtTable[0], &irq0FHandler, IRQ_MODE_INTERRUPT);
+	//setInterrupt(&idtTable[15], &irq0F, IRQ_MODE_INTERRUPT);
 	
 	asm volatile ("sidt %0" : "=m" (lidt));
 	
@@ -89,45 +90,54 @@ void setInterrupt(struct idt_entry *idt, void(*handler)(struct interrupt_frame*)
 	idt->unused1 = 0;
 }
 
-void checkErrk() {
-	kpanic(irqReturnAddr);
+void checkErrk(struct interrupt_frame* frame) {
+	kpanici(frame);
 }
 
 INTERRUPT_TYPE irq00Handler(struct interrupt_frame* frame) {
 	logk("Division by zero.\n");
-	checkErrk();
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq01Handler(struct interrupt_frame* frame) {
-	logk("irq01\n");
+	logk("Debug.\n");
 }
 
 INTERRUPT_TYPE irq02Handler(struct interrupt_frame* frame) {
-	logk("irq02\n");
+	logk("NMI.\n");
 }
 
 INTERRUPT_TYPE irq03Handler(struct interrupt_frame* frame) {
-	logk("irq03\n");
+	logk("Breakpoint.\n");
 }
 
 INTERRUPT_TYPE irq04Handler(struct interrupt_frame* frame) {
-	logk("irq04\n");
+	logk("Overflow\n");
 }
 
 INTERRUPT_TYPE irq05Handler(struct interrupt_frame* frame) {
-	logk("irq05\n");
+	logk("Bound range exceeded.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq06Handler(struct interrupt_frame* frame) {
-	logk("irq06\n");
+	if (*(uint16_t*) frame->rip == 0x0B0F) {
+		logk("Invalid opcode: UD2\n");
+		logk("This is caused by a bug.\n");
+	} else {
+		logk("Invalid opcode.\n");
+	}
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq07Handler(struct interrupt_frame* frame) {
-	logk("irq07\n");
+	logk("Device not available.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq08Handler(struct interrupt_frame* frame) {
-	logk("irq08\n");
+	logk("Double fault.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq09Handler(struct interrupt_frame* frame) {
@@ -139,19 +149,23 @@ INTERRUPT_TYPE irq0AHandler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq0BHandler(struct interrupt_frame* frame) {
-	logk("irq0B\n");
+	logk("Segment not present.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0CHandler(struct interrupt_frame* frame) {
-	logk("irq0C\n");
+	logk("Stack segment fault.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0DHandler(struct interrupt_frame* frame) {
-	logk("irq0D\n");
+	logk("General protection fault.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0EHandler(struct interrupt_frame* frame) {
-	logk("irq0E\n");
+	logk("Page fault.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0FHandler(struct interrupt_frame* frame) {
@@ -163,19 +177,23 @@ INTERRUPT_TYPE irq10Handler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq11Handler(struct interrupt_frame* frame) {
-	logk("irq11\n");
+	logk("Alignment check.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq12Handler(struct interrupt_frame* frame) {
-	logk("irq12\n");
+	logk("Machine check.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq13Handler(struct interrupt_frame* frame) {
-	logk("irq13\n");
+	logk("SIMD floating point exception.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq14Handler(struct interrupt_frame* frame) {
-	logk("irq14\n");
+	logk("Virtualisation exception.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq15Handler(struct interrupt_frame* frame) {
@@ -215,7 +233,8 @@ INTERRUPT_TYPE irq1DHandler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq1EHandler(struct interrupt_frame* frame) {
-	logk("irq1E\n");
+	logk("Secutiry exception.\n");
+	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq1FHandler(struct interrupt_frame* frame) {

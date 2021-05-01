@@ -47,12 +47,6 @@ void *getTag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 	return 0;
 }
 
-void earlyStageDeath() {
-	while (1) {
-		asm (" hlt");
-	}
-}
-
 void logk(char *message) {
 	ttyFgCol = COLOR_GREEN;
 	fbPrint("[   0.0000] ");
@@ -67,42 +61,21 @@ static char regNames[16][4] = {
 	"r12", "r13", "r14", "r15"
 };
 
-void kpanic(size_t address) {
-	asm volatile ("push %r15");
-	asm volatile ("push %r14");
-	asm volatile ("push %r13");
-	asm volatile ("push %r12");
-	asm volatile ("push %r11");
-	asm volatile ("push %r10");
-	asm volatile ("push %r9");
-	asm volatile ("push %r8");
-	asm volatile ("push %rdi");
-	asm volatile ("push %rsi");
-	asm volatile ("push %rsp");
-	asm volatile ("push %rbp");
-	asm volatile ("push %rdx");
-	asm volatile ("push %rcx");
-	asm volatile ("push %rbx");
-	asm volatile ("push %rax");
-	uint64_t temp = address ? address : (uint64_t) __builtin_return_address(0);
-	ttyFgCol = COLOR_RED;
-	// RIP
-	fbPrint("KERNEL PANIC!\nrip: ");
-	fbPuthex(temp, 16);
-	// General registers.
-	fbNewln();
-	for (int i = 0; i < 16; i++) {
-		fbNewln();
-		fbPrint(regNames[i]);
-		fbPrint(": ");
-		asm volatile ("pop %0" : "=r" (temp));
-		fbPuthex(temp, 16);
+static char segNames[6][6] = {
+	" cs: ", " ss: ",
+	" ds: ", " es: ",
+	" fs: ", " gs: "
+};
+
+uint64_t sisqrt(uint64_t val) {
+	uint64_t res = 0;
+	uint64_t sub = 1;
+	while (sub <= val) {
+		val -= sub;
+		sub += 2;
+		res ++;
 	}
-	// Stop.
-	asm ("cli");
-	while (1) {
-		asm ("hlt");
-	};
+	return res;
 }
 
 // Kernel entry point.
@@ -111,15 +84,21 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	// Grab framebuffer info.
 	struct stivale2_struct_tag_framebuffer *framebufTag;
 	framebufTag = getTag(stivale2_struct, STIVALE2_STRUCT_TAG_FRAMEBUFFER_ID);
-	if (!framebufTag) earlyStageDeath();
+	if (!framebufTag) {
+		// Stop.
+		asm ("cli");
+		while (1) {
+			asm ("hlt");
+		};
+	}
 	
 	// Set up the framebuffer.
 	framebuf = (uint32_t*) framebufTag->framebuffer_addr;
 	framebufWidth = framebufTag->framebuffer_width;
 	framebufHeight = framebufTag->framebuffer_height;
 	doubleTextSize = 1;
-	ttyMaxX = (framebufWidth / 7) >> doubleTextSize;
-	ttyMaxY = (framebufHeight / 9) >> doubleTextSize;
+	ttyMaxX = (framebufWidth >> doubleTextSize) / 7;
+	ttyMaxY = (framebufHeight >> doubleTextSize) / 9;
 	
 	// Let's do something.
 	logk("Skye OS boot\n");
@@ -174,17 +153,101 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	logk("Setting up interrupts.\n");
 	setupInterrupts();
 	asm ("sti");
-	logk("TEST0\n");
-	//int ax = 123456;
-	//int sm = 2;
-	//fbPuthex(ax / sm, 16);
-	//fbNewln();
-	asm volatile ("int $0x00");
-	logk("TEST1\n");
+	logk("If you read this, we didn't crash... Yet.\n");
+	
+	// Let's have some fun.
+	for (uint16_t y = 0; y < framebufHeight; y ++) {
+		for (uint16_t x = 0; x < framebufWidth; x ++) {
+			if (fbGet(x, y) & 0xffffff != 0) continue;
+			uint32_t color;
+			uint16_t _x = framebufWidth - x - 1;
+			uint16_t _y = framebufHeight - y - 1;
+			uint8_t red = 255 - sisqrt(x * x + y * y) * 192 / framebufWidth;
+			int16_t _green = sisqrt(_x * _x + y * y) * 400 / framebufWidth;
+			uint8_t green = _green > 255 ? 511-_green : _green;
+			uint8_t blue = 255 - (_x + _y) * 128 / framebufWidth;
+			color = red << 16 | green << 8 | blue;
+			fbSet(x, y, color);
+		}
+	}
 	
 	// Fin.
-	earlyStageDeath();
-	
+	asm ("cli");
+	while (1) {
+		asm ("hlt");
+	};
+}
+
+void kpanic(size_t address) {
+	asm volatile ("push %r15");
+	asm volatile ("push %r14");
+	asm volatile ("push %r13");
+	asm volatile ("push %r12");
+	asm volatile ("push %r11");
+	asm volatile ("push %r10");
+	asm volatile ("push %r9");
+	asm volatile ("push %r8");
+	asm volatile ("push %rdi");
+	asm volatile ("push %rsi");
+	asm volatile ("push %rsp");
+	asm volatile ("push %rbp");
+	asm volatile ("push %rdx");
+	asm volatile ("push %rcx");
+	asm volatile ("push %rbx");
+	asm volatile ("push %rax");
+	uint64_t temp = address ? address : (uint64_t) __builtin_return_address(0);
+	ttyFgCol = COLOR_RED;
+	// RIP
+	fbPrint("KERNEL PANIC!\nrip: ");
+	fbPuthex(temp, 16);
+	// General registers.
+	fbNewln();
+	for (int i = 0; i < 16; i++) {
+		fbNewln();
+		fbPrint(regNames[i]);
+		fbPrint(": ");
+		asm volatile ("pop %0" : "=r" (temp));
+		fbPuthex(temp, 16);
+	}
+	// Stop.
+	asm ("cli");
+	while (1) {
+		asm ("hlt");
+	};
+}
+
+void kpanici(struct interrupt_frame* data) {
+	uint64_t temp = data->rip;
+	ttyFgCol = COLOR_RED;
+	// RIP
+	fbPrint("KERNEL PANIC!\nrip: ");
+	fbPuthex(temp, 16);
+	// Segment registers
+	uint16_t segs[6] = {
+		data->cs, data->ss
+	};
+	asm volatile ("mov %%ds, %0" : "=r" (segs[2]));
+	asm volatile ("mov %%es, %0" : "=r" (segs[3]));
+	asm volatile ("mov %%fs, %0" : "=r" (segs[4]));
+	asm volatile ("mov %%gs, %0" : "=r" (segs[5]));
+	// General registers.
+	fbNewln();
+	for (int i = 0; i < 16; i++) {
+		fbNewln();
+		fbPrint(regNames[i]);
+		fbPrint(": ");
+		temp = (&data->rax)[i];
+		fbPuthex(temp, 16);
+		if (i < 6) {
+			fbPrint(segNames[i]);
+			fbPuthex(segs[i], 4);
+		}
+	}
+	// Stop.
+	asm ("cli");
+	while (1) {
+		asm ("hlt");
+	};
 }
 
 

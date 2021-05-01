@@ -75,13 +75,14 @@ void fbPuthex(uint64_t value, int num) {
 void fbNewln() {
 	ttyXPos = 0;
 	ttyYPos ++;
-	if (ttyYPos > ttyMaxY) {
+	if (ttyYPos >= ttyMaxY) {
 		int dest = 0;
 		int src = framebufWidth * (doubleTextSize ? FONT_HEIGHT2 : FONT_HEIGHT);
 		int len = framebufWidth * framebufHeight - src;
 		for (int i = 0; i < len; i++) {
-			framebuf[dest] = framebuf[src];
+			framebuf[dest + i] = framebuf[src + i];
 		}
+		ttyYPos = ttyMaxY - 1;
 	}
 }
 
