@@ -2,8 +2,9 @@
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
 #include <stdint.h>
+#include "../memory.h"
 
-#define COLOR_BLACK			0xff000000
+#define COLOR_BLACK			0x00000000
 #define COLOR_DARK_RED		0xff7f0000
 #define COLOR_DARK_GREEN	0xff007f00
 #define COLOR_DARK_YELLOW	0xff7f3f00
@@ -36,6 +37,8 @@ extern int ttyMaxY;
 extern int ttyXPos;
 extern int ttyYPos;
 
+// Set-up for the FRBBFBFBFBF
+void fbSetup();
 // Prints text in a bit of TTY action.
 void fbPrint(char *text);
 void fbPutc(char text);

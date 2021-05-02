@@ -1,7 +1,9 @@
 
 #include "../kernel.h"
+#include "../memory.h"
 #include "framebuffer.h"
 #include "font7x9.h"
+#include "icon.h"
 #include <stdint.h>
 #include <stddef.h>
 
@@ -39,11 +41,86 @@ int ttyXPos = 0;
 int ttyYPos = 0;
 
 static char ttyLastChar = 0;
+static uint32_t *altBuf = 0;
+
+uint64_t sisqrt(uint64_t val) {
+	uint64_t res = 0;
+	uint64_t sub = 1;
+	while (sub <= val) {
+		val -= sub;
+		sub += 2;
+		res ++;
+	}
+	return res;
+}
+
+void fbDrawIcon() {
+	if (altBuf) {
+		for (uint16_t y = 0; y < ICON_HEIGHT; y++) {
+			for (uint16_t x = 0; x < ICON_WIDTH; x++) {
+				uint8_t blend = iconData[x + y * ICON_WIDTH];
+				uint8_t iblend = 255 - iconData[x + y * ICON_WIDTH];
+				uint32_t alt = altBuf[framebufWidth - ICON_WIDTH + x + y * framebufWidth];
+				uint8_t _red = (alt >> 16) & 0xff;
+				uint8_t _grn = (alt >>  8) & 0xff;
+				uint8_t _blu = (alt >>  0) & 0xff;
+				uint8_t red = 0x85 * blend / 255 + _red * iblend / 255;
+				uint8_t grn =        blend       + _grn * iblend / 255;
+				uint8_t blu =        blend       + _blu * iblend / 255;
+				uint32_t col = red << 16 | grn << 8 | blu;
+				fbSet(framebufWidth - ICON_WIDTH + x, y, col);
+			}
+		}
+	} else {
+		for (uint16_t y = 0; y < ICON_HEIGHT; y++) {
+			for (uint16_t x = 0; x < ICON_WIDTH; x++) {
+				uint32_t col = iconData[x + y * ICON_WIDTH] * 0x010101 & 0x85ffff;
+				fbSet(framebufWidth - ICON_WIDTH + x, y, col);
+			}
+		}
+	}
+}
+
+void fbSetup() {
+	struct pmm_entry *got = pmm_alloc(framebufWidth * framebufHeight * sizeof(uint32_t));
+	altBuf = (uint32_t *) got->base;
+	
+	//Let's have some fun.
+	for (uint16_t y = 0; y < framebufHeight; y ++) {
+		for (uint16_t x = 0; x < framebufWidth; x ++) {
+			uint32_t color = 0;
+			uint16_t _x = framebufWidth - x - 1;
+			uint16_t _y = framebufHeight - y - 1;
+			uint8_t red = 255 - sisqrt(x * x + y * y) * 192 / framebufWidth;
+			int16_t _green = sisqrt(_x * _x + y * y) * 400 / framebufWidth;
+			uint8_t green = _green > 255 ? 511-_green : _green;
+			uint8_t blue = 255 - (_x + _y) * 128 / framebufWidth;
+			color = red << 16 | green << 8 | blue;
+			//color >>= 1;
+			//color &= 0x7f7f7f;
+			color &= 0xcfcfcf;
+			//color = (color >> 1 & 0x7f7f7f) + (color >> 2 & 0x3f3f3f);
+			altBuf[x + y * framebufWidth] = color;
+		}
+	}
+	
+	fbMagicRect(0, 0, framebufWidth, framebufHeight);
+}
 
 void fbPrint(char *text) {
 	while (*text) {
 		fbPutc(*text);
 		text ++;
+	}
+}
+
+void fbMagicRect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
+	if (!altBuf) return;
+	for (uint16_t y = y0; y < y0 + h; y ++) {
+		for (uint16_t x = x0; x < x0 + w; x ++) {
+			if (fbGet(x, y) & 0xffffff != 0) continue;
+			fbSet(x, y, altBuf[x + y * framebufWidth]);
+		}
 	}
 }
 
@@ -59,6 +136,7 @@ void fbPutc(char text) {
 	} else {
 		fbChar((ttyXPos ++) * FONT_WIDTH, ttyYPos * FONT_HEIGHT, text, ttyFgCol, ttyBgCol);
 	}
+	
 	ttyLastChar = text;
 }
 
@@ -77,12 +155,36 @@ void fbNewln() {
 	ttyYPos ++;
 	if (ttyYPos >= ttyMaxY) {
 		int dest = 0;
-		int src = framebufWidth * (doubleTextSize ? FONT_HEIGHT2 : FONT_HEIGHT);
+		int numScrolled = 2;
+		int src = framebufWidth * (doubleTextSize ? FONT_HEIGHT2 : FONT_HEIGHT) * numScrolled;
 		int len = framebufWidth * framebufHeight - src;
-		for (int i = 0; i < len; i++) {
-			framebuf[dest + i] = framebuf[src + i];
+		if (altBuf) {
+			for (int i = 0; i < len; i++) {
+				uint32_t val = framebuf[src + i];
+				if (val & 0xff000000) {
+					framebuf[dest + i] = val;
+				} else {
+					framebuf[dest + i] = altBuf[dest + i];
+				}
+			}
+		} else {
+			for (int i = 0; i < len; i++) {
+				uint32_t val = framebuf[src + i];
+				framebuf[dest + i] = val;
+			}
 		}
-		ttyYPos = ttyMaxY - 1;
+		ttyYPos = ttyMaxY - numScrolled;
+		if (altBuf) {
+			for (int i = len; i < framebufWidth * framebufHeight; i++) {
+				uint32_t val = altBuf[dest + i];
+				framebuf[dest + i] = val;
+			}
+		} else {
+			for (int i = len; i < framebufWidth * framebufHeight; i++) {
+				framebuf[dest + i] = ttyBgCol;
+			}
+		}
+		fbDrawIcon();
 	}
 }
 
@@ -112,6 +214,7 @@ void fbChar(int x, int y, char text, uint32_t color, uint32_t bgColor) {
 				fbSet(x + 1 + (_x << 1), y + 1 + (_y << 1), val ? color : bgColor);
 			}
 		}
+		fbMagicRect(x, y, FONT_WIDTH2, FONT_HEIGHT2);
 	} else {
 		for (int _y = 0; _y < 9; _y ++) {
 			for (int _x = 0; _x < 7; _x ++) {
@@ -119,6 +222,7 @@ void fbChar(int x, int y, char text, uint32_t color, uint32_t bgColor) {
 				fbSet(x + _x, y + _y, val ? color : bgColor);
 			}
 		}
+		fbMagicRect(x, y, FONT_WIDTH, FONT_HEIGHT);
 	}
 }
 

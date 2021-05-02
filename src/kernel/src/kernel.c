@@ -7,7 +7,8 @@
 
 #include "stivale2.h"
 #include "kernel.h"
-#include "graphics/framebuffer.h"
+#include "heap.h"
+#include "framebuffer.h"
 #include "string.h"
 #include "memory.h"
 #include "interrupts.h"
@@ -47,13 +48,6 @@ void *getTag(struct stivale2_struct *stivale2_struct, uint64_t id) {
 	return 0;
 }
 
-void logk(char *message) {
-	ttyFgCol = COLOR_GREEN;
-	fbPrint("[   0.0000] ");
-	ttyFgCol = COLOR_WHITE;
-	fbPrint(message);
-}
-
 static char regNames[16][4] = {
 	"rax", "rbx", "rcx", "rdx",
 	"rsp", "rbp", "rsi", "rdi",
@@ -66,17 +60,6 @@ static char segNames[6][6] = {
 	" ds: ", " es: ",
 	" fs: ", " gs: "
 };
-
-uint64_t sisqrt(uint64_t val) {
-	uint64_t res = 0;
-	uint64_t sub = 1;
-	while (sub <= val) {
-		val -= sub;
-		sub += 2;
-		res ++;
-	}
-	return res;
-}
 
 // Kernel entry point.
 void _start(struct stivale2_struct *stivale2_struct) {
@@ -99,6 +82,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	doubleTextSize = 1;
 	ttyMaxX = (framebufWidth >> doubleTextSize) / 7;
 	ttyMaxY = (framebufHeight >> doubleTextSize) / 9;
+	fbFill(ttyBgCol);
 	
 	// Let's do something.
 	logk("Skye OS boot\n");
@@ -150,32 +134,51 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	logk("Setting up memory map.\n");
 	asm ("cli");
 	setupMemoryMap(memmapTag->memmap, memmapTag->entries);
+	initKernelHeap();
+	fbSetup();
+	printPmm();
 	logk("Setting up interrupts.\n");
 	setupInterrupts();
 	asm ("sti");
 	logk("If you read this, we didn't crash... Yet.\n");
-	
-	// Let's have some fun.
-	for (uint16_t y = 0; y < framebufHeight; y ++) {
-		for (uint16_t x = 0; x < framebufWidth; x ++) {
-			if (fbGet(x, y) & 0xffffff != 0) continue;
-			uint32_t color;
-			uint16_t _x = framebufWidth - x - 1;
-			uint16_t _y = framebufHeight - y - 1;
-			uint8_t red = 255 - sisqrt(x * x + y * y) * 192 / framebufWidth;
-			int16_t _green = sisqrt(_x * _x + y * y) * 400 / framebufWidth;
-			uint8_t green = _green > 255 ? 511-_green : _green;
-			uint8_t blue = 255 - (_x + _y) * 128 / framebufWidth;
-			color = red << 16 | green << 8 | blue;
-			fbSet(x, y, color);
-		}
-	}
+	logk("Kalloc test:\n");
+	size_t one = (size_t) kalloc(230);
+	size_t two = (size_t) kalloc(234);
+	logk("");
+	fbPuthex(one, 16);
+	fbNewln();
+	logk("");
+	fbPuthex(two, 16);
+	fbNewln();
+	kfree((void *) one);
+	one = kalloc(123);
+	logk("");
+	fbPuthex(one, 16);
+	fbNewln();
+	kfree((void *) one);
+	kfree((void *) two);
+	one = kalloc(500);
+	logk("");
+	fbPuthex(one, 16);
+	fbNewln();
+	two = (size_t) kalloc(0x1000);
+	logk("");
+	fbPuthex(two, 16);
+	fbNewln();
+	printPmm();
 	
 	// Fin.
 	asm ("cli");
 	while (1) {
 		asm ("hlt");
 	};
+}
+
+void logk(char *message) {
+	ttyFgCol = COLOR_GREEN;
+	fbPrint("[   0.0000] ");
+	ttyFgCol = COLOR_WHITE;
+	fbPrint(message);
 }
 
 void kpanic(size_t address) {
