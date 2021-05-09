@@ -44,14 +44,25 @@ static char ttyLastChar = 0;
 static uint32_t *altBuf = 0;
 
 uint64_t sisqrt(uint64_t val) {
-	uint64_t res = 0;
-	uint64_t sub = 1;
-	while (sub <= val) {
-		val -= sub;
-		sub += 2;
-		res ++;
+	uint64_t est = 1;
+	uint64_t n = 20;
+	uint64_t inc = 1 << 12;
+	char dir = 1;
+	while (--n) {
+		uint64_t g = est * est;
+		if (g < val) {
+			if (!dir) inc >>= 1;
+			est += inc;
+			dir = 1;
+		} else if (g > val) {
+			if (dir) inc >>= 1;
+			est -= inc;
+			dir = 0;
+		} else {
+			return est;
+		}
 	}
-	return res;
+	return est;
 }
 
 void fbDrawIcon() {
@@ -105,6 +116,7 @@ void fbSetup() {
 	}
 	
 	fbMagicRect(0, 0, framebufWidth, framebufHeight);
+	fbDrawIcon();
 }
 
 void fbPrint(char *text) {

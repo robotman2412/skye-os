@@ -39,6 +39,7 @@ extern int ttyYPos;
 
 // Set-up for the FRBBFBFBFBF
 void fbSetup();
+void fbDrawIcon();
 // Prints text in a bit of TTY action.
 void fbPrint(char *text);
 void fbPutc(char text);

@@ -17,6 +17,7 @@ void *getTag(struct stivale2_struct *stivale2_struct, uint64_t id);
 
 // Used by anything to log things.
 void logk(char *message);
+void warnk(char *message);
 
 // Dump all registers and halt.
 void kpanic(size_t offendingAddress);

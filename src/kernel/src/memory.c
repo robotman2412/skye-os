@@ -90,8 +90,8 @@ void setupMemoryMap(struct stivale2_mmap_entry *stEntries, size_t stEntriesLen) 
 	}
 	// Ensure we actually have that.
 	if (pmmEntryLand == 0) {
-		logk("Not enough physical memory!\n");
-		logk("Required ");
+		warnk("Not enough physical memory!\n");
+		warnk("Required ");
 		fbPuthex(requiredFreeSize, 16);
 		fbNewln();
 		kpanic(0);
@@ -391,7 +391,7 @@ struct pmm_entry *pmm_split(struct pmm_entry *block, size_t len) {
 		}
 		
 		if (!space) {
-			logk("No space for PMM entry!\n");
+			warnk("No space for PMM entry!\n");
 			kpanic(0);
 		}
 		space->prev = block;

@@ -95,48 +95,48 @@ void checkErrk(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq00Handler(struct interrupt_frame* frame) {
-	logk("Division by zero.\n");
+	warnk("Division by zero.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq01Handler(struct interrupt_frame* frame) {
-	logk("Debug.\n");
+	warnk("Debug.\n");
 }
 
 INTERRUPT_TYPE irq02Handler(struct interrupt_frame* frame) {
-	logk("NMI.\n");
+	warnk("NMI.\n");
 }
 
 INTERRUPT_TYPE irq03Handler(struct interrupt_frame* frame) {
-	logk("Breakpoint.\n");
+	warnk("Breakpoint.\n");
 }
 
 INTERRUPT_TYPE irq04Handler(struct interrupt_frame* frame) {
-	logk("Overflow\n");
+	warnk("Overflow\n");
 }
 
 INTERRUPT_TYPE irq05Handler(struct interrupt_frame* frame) {
-	logk("Bound range exceeded.\n");
+	warnk("Bound range exceeded.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq06Handler(struct interrupt_frame* frame) {
 	if (*(uint16_t*) frame->rip == 0x0B0F) {
-		logk("Invalid opcode: UD2\n");
-		logk("This is caused by a bug.\n");
+		warnk("Invalid opcode: UD2\n");
+		warnk("This is caused by a bug.\n");
 	} else {
-		logk("Invalid opcode.\n");
+		warnk("Invalid opcode.\n");
 	}
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq07Handler(struct interrupt_frame* frame) {
-	logk("Device not available.\n");
+	warnk("Device not available.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq08Handler(struct interrupt_frame* frame) {
-	logk("Double fault.\n");
+	warnk("Double fault.\n");
 	checkErrk(frame);
 }
 
@@ -149,22 +149,22 @@ INTERRUPT_TYPE irq0AHandler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq0BHandler(struct interrupt_frame* frame) {
-	logk("Segment not present.\n");
+	warnk("Segment not present.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0CHandler(struct interrupt_frame* frame) {
-	logk("Stack segment fault.\n");
+	warnk("Stack segment fault.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0DHandler(struct interrupt_frame* frame) {
-	logk("General protection fault.\n");
+	warnk("General protection fault.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq0EHandler(struct interrupt_frame* frame) {
-	logk("Page fault.\n");
+	warnk("Page fault.\n");
 	checkErrk(frame);
 }
 
@@ -177,22 +177,22 @@ INTERRUPT_TYPE irq10Handler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq11Handler(struct interrupt_frame* frame) {
-	logk("Alignment check.\n");
+	warnk("Alignment check.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq12Handler(struct interrupt_frame* frame) {
-	logk("Machine check.\n");
+	warnk("Machine check.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq13Handler(struct interrupt_frame* frame) {
-	logk("SIMD floating point exception.\n");
+	warnk("SIMD floating point exception.\n");
 	checkErrk(frame);
 }
 
 INTERRUPT_TYPE irq14Handler(struct interrupt_frame* frame) {
-	logk("Virtualisation exception.\n");
+	warnk("Virtualisation exception.\n");
 	checkErrk(frame);
 }
 
@@ -233,7 +233,7 @@ INTERRUPT_TYPE irq1DHandler(struct interrupt_frame* frame) {
 }
 
 INTERRUPT_TYPE irq1EHandler(struct interrupt_frame* frame) {
-	logk("Secutiry exception.\n");
+	warnk("Secutiry exception.\n");
 	checkErrk(frame);
 }
 

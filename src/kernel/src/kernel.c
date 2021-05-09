@@ -5,12 +5,13 @@
  * Do whatever you want with it
  */
 
-#include "stivale2.h"
 #include "kernel.h"
-#include "heap.h"
-#include "framebuffer.h"
-#include "string.h"
+#include "stivale2.h"
 #include "memory.h"
+#include "heap.h"
+#include "acpi.h"
+#include "timer.h"
+#include "framebuffer.h"
 #include "interrupts.h"
 
 // Reserve me some stack.
@@ -83,6 +84,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	ttyMaxX = (framebufWidth >> doubleTextSize) / 7;
 	ttyMaxY = (framebufHeight >> doubleTextSize) / 9;
 	fbFill(ttyBgCol);
+	fbDrawIcon();
 	
 	// Let's do something.
 	logk("Skye OS boot\n");
@@ -107,7 +109,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 				fbPrint(" RESERVED");
 				break;
 			case (STIVALE2_MMAP_ACPI_RECLAIMABLE):
-				fbPrint(" ACPI RECLAIMABLE");
+				fbPrint(" ACPI RECL.");
 				break;
 			case (STIVALE2_MMAP_ACPI_NVS):
 				fbPrint(" ACPI NVS");
@@ -116,7 +118,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 				fbPrint(" BAD MEMORY");
 				break;
 			case (STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE):
-				fbPrint(" BOOTLOADER RECLAIMABLE");
+				fbPrint(" BOOTL RECL.");
 				break;
 			case (STIVALE2_MMAP_KERNEL_AND_MODULES):
 				fbPrint(" KERNEL");
@@ -140,32 +142,17 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	logk("Setting up interrupts.\n");
 	setupInterrupts();
 	asm ("sti");
-	logk("If you read this, we didn't crash... Yet.\n");
-	logk("Kalloc test:\n");
-	size_t one = (size_t) kalloc(230);
-	size_t two = (size_t) kalloc(234);
-	logk("");
-	fbPuthex(one, 16);
-	fbNewln();
-	logk("");
-	fbPuthex(two, 16);
-	fbNewln();
-	kfree((void *) one);
-	one = kalloc(123);
-	logk("");
-	fbPuthex(one, 16);
-	fbNewln();
-	kfree((void *) one);
-	kfree((void *) two);
-	one = kalloc(500);
-	logk("");
-	fbPuthex(one, 16);
-	fbNewln();
-	two = (size_t) kalloc(0x1000);
-	logk("");
-	fbPuthex(two, 16);
-	fbNewln();
-	printPmm();
+	logk("Confusing ACPI.\n");
+	
+	struct stivale2_struct_tag_rsdp *rsdpTag;
+	rsdpTag = getTag(stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
+	if (!rsdpTag) {
+		warnk("Missing RDSP!\n");
+		kpanic(0);
+	} else {
+		confuseAcpi(rsdpTag);
+		timerSetup();
+	}
 	
 	// Fin.
 	asm ("cli");
@@ -176,7 +163,16 @@ void _start(struct stivale2_struct *stivale2_struct) {
 
 void logk(char *message) {
 	ttyFgCol = COLOR_GREEN;
+	fbPrint("[   0.0000] [L] ");
+	ttyFgCol = COLOR_WHITE;
+	fbPrint(message);
+}
+
+void warnk(char *message) {
+	ttyFgCol = COLOR_GREEN;
 	fbPrint("[   0.0000] ");
+	ttyFgCol = COLOR_RED;
+	fbPrint("[W] ");
 	ttyFgCol = COLOR_WHITE;
 	fbPrint(message);
 }
