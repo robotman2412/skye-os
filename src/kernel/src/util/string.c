@@ -29,8 +29,15 @@ int memcmp(const void *a, const void *b, size_t num) {
 void *memcpy(const void *dest, const void* src, size_t num) {
 	if (dest == NULL || src == NULL) return NULL;
 	// TODO: see if there is some hardware for this?
-	for (size_t i = 0; i < num; i++) {
-		((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+	if (src > dest) {
+		for (size_t i = 0; i < num; i++) {
+			((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+		}
+	} else {
+		for (size_t i = num - 1; i > 0; i--) {
+			((uint8_t*)dest)[i] = ((uint8_t*)src)[i];
+		}
+		((uint8_t*)dest)[0] = ((uint8_t*)src)[0];
 	}
 	return dest;
 }
@@ -105,7 +112,7 @@ int strncmp(const char *a, const char *b, size_t num) {
 
 char *strcpy(char *dest, const char *src) {
 	if (dest == NULL || src == NULL) return NULL;
-	return memcpy(dest, src, strlen(src));
+	return memcpy(dest, src, strlen(src) + 1);
 }
 
 char *strncpy(char *dest, const char *src, size_t num) {

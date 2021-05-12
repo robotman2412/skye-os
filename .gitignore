@@ -1,3 +1,6 @@
 tools
 
 src/.vscode
+src/kernel/build
+*.code-workspace
+

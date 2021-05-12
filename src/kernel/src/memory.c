@@ -94,7 +94,7 @@ void setupMemoryMap(struct stivale2_mmap_entry *stEntries, size_t stEntriesLen) 
 		warnk("Required ");
 		fbPuthex(requiredFreeSize, 16);
 		fbNewln();
-		kpanic(0);
+		kpanic();
 	}
 	// First fill the area with zero.
 	for (size_t i = 0; i < (requiredFreeSize + 0xfff) & ~0xff; i++) {
@@ -392,7 +392,7 @@ struct pmm_entry *pmm_split(struct pmm_entry *block, size_t len) {
 		
 		if (!space) {
 			warnk("No space for PMM entry!\n");
-			kpanic(0);
+			kpanic();
 		}
 		space->prev = block;
 		space->next = block->next;

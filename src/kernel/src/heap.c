@@ -1,5 +1,6 @@
 
 #include "heap.h"
+#include "string.h"
 
 struct heap_desc* firstHeapDesc;
 struct heap_desc* lastHeapDesc;
@@ -87,6 +88,24 @@ void *kalloc(size_t size) {
 	}
 	bestMatch->flags |= HEAP_IS_USED;
 	return (void *) &bestMatch[1];
+}
+
+void *krealloc(void *ptr, size_t size) {
+	if (!ptr) {
+		return kalloc(size);
+	}
+	struct heap_desc *desc = ptr - sizeof(struct heap_desc);
+	if (desc->magic != HEAP_MAGIC_SAUCE) {
+		void *dest = kalloc(size);
+		warnk("Memory not copied: pointer is not on the heap!\n");
+		return dest;
+	} else if (desc->length >= size) {
+		return ptr;
+	}
+	void *dest = kalloc(size);
+	memcpy(dest, ptr, desc->length);
+	kfree(ptr);
+	return dest;
 }
 
 static void checkFree(struct heap_desc *desc) {

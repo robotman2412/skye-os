@@ -10,6 +10,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "stivale2.h"
+#include "logging.h"
+#include "numbers.h"
 #include "interrupts/interrupts.h"
 
 // Get a stivale2 tag.
@@ -20,7 +22,7 @@ void logk(char *message);
 void warnk(char *message);
 
 // Dump all registers and halt.
-void kpanic(size_t offendingAddress);
+void kpanic();
 void kpanici(struct interrupt_frame* data);
 
 // Try to detect what type of CPU we have.

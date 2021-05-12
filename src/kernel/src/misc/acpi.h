@@ -48,7 +48,6 @@ extern char isAcpiV2;
 
 void confuseAcpi(struct stivale2_struct_tag_rsdp *rsdpTag);
 
-size_t countAcpiTables(char *signature);
-void getAcpiTables(char *signature, void** table);
+void *getAcpiTable(char *signature);
 
 #endif //ACPI_H

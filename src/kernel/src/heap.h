@@ -32,6 +32,9 @@ void initKernelHeap();
 // Allocate at least size bytes of memory.
 void *kalloc(size_t size);
 
+// Well yes.
+void *krealloc(void *ptr, size_t size);
+
 // Free the thingy.
 int kfree(void *ptr);
 

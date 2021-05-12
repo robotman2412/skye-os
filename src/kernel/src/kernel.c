@@ -14,6 +14,8 @@
 #include "framebuffer.h"
 #include "interrupts.h"
 
+//#include "testing.h"
+
 // Reserve me some stack.
 static uint8_t stack[4096];
 
@@ -87,58 +89,18 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	fbDrawIcon();
 	
 	// Let's do something.
-	logk("Skye OS boot\n");
-	logk("Memory map:\n");
-	
 	struct stivale2_struct_tag_memmap *memmapTag;
 	memmapTag = getTag(stivale2_struct, STIVALE2_STRUCT_TAG_MEMMAP_ID);
 	
-	size_t usableMemory = 0;
-	for (size_t i = 0; i < memmapTag->entries; i++) {
-		struct stivale2_mmap_entry mapEntry = memmapTag->memmap[i];
-		logk("");
-		fbPuthex(mapEntry.base, 16);
-		fbPrint(" -> ");
-		fbPuthex(mapEntry.base + mapEntry.length - 1, 16);
-		switch (mapEntry.type) {
-			case (STIVALE2_MMAP_USABLE):
-				fbPrint(" USABLE");
-				usableMemory += mapEntry.length;
-				break;
-			case (STIVALE2_MMAP_RESERVED):
-				fbPrint(" RESERVED");
-				break;
-			case (STIVALE2_MMAP_ACPI_RECLAIMABLE):
-				fbPrint(" ACPI RECL.");
-				break;
-			case (STIVALE2_MMAP_ACPI_NVS):
-				fbPrint(" ACPI NVS");
-				break;
-			case (STIVALE2_MMAP_BAD_MEMORY):
-				fbPrint(" BAD MEMORY");
-				break;
-			case (STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE):
-				fbPrint(" BOOTL RECL.");
-				break;
-			case (STIVALE2_MMAP_KERNEL_AND_MODULES):
-				fbPrint(" KERNEL");
-				break;
-			case (STIVALE2_MMAP_FRAMEBUFFER):
-				fbPrint(" FRAMEBUFFER");
-				break;
-		}
-		fbNewln();
-	}
-	
-	logk("Usable memory:      ");
-	fbPuthex(usableMemory, 16);
-	fbNewln();
-	logk("Setting up memory map.\n");
 	asm ("cli");
 	setupMemoryMap(memmapTag->memmap, memmapTag->entries);
 	initKernelHeap();
+	
 	fbSetup();
+	logk("Skye OS boot\n");
+	logk("Memory map:\n");
 	printPmm();
+	
 	logk("Setting up interrupts.\n");
 	setupInterrupts();
 	asm ("sti");
@@ -148,11 +110,19 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	rsdpTag = getTag(stivale2_struct, STIVALE2_STRUCT_TAG_RSDP_ID);
 	if (!rsdpTag) {
 		warnk("Missing RDSP!\n");
-		kpanic(0);
+		kpanic();
 	} else {
 		confuseAcpi(rsdpTag);
 		timerSetup();
 	}
+	
+#ifdef TESTING_H
+	doDebugTests();
+#endif
+	
+	// Waste some time.
+	for (size_t i = 0; i < 100000000; i++) fbSet(i & 0x3, 0, fbGet(i & 0x3, 0));
+	logk("TIME_TEST_LOL\n");
 	
 	// Fin.
 	asm ("cli");
@@ -161,23 +131,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	};
 }
 
-void logk(char *message) {
-	ttyFgCol = COLOR_GREEN;
-	fbPrint("[   0.0000] [L] ");
-	ttyFgCol = COLOR_WHITE;
-	fbPrint(message);
-}
-
-void warnk(char *message) {
-	ttyFgCol = COLOR_GREEN;
-	fbPrint("[   0.0000] ");
-	ttyFgCol = COLOR_RED;
-	fbPrint("[W] ");
-	ttyFgCol = COLOR_WHITE;
-	fbPrint(message);
-}
-
-void kpanic(size_t address) {
+void kpanic() {
 	asm volatile ("push %r15");
 	asm volatile ("push %r14");
 	asm volatile ("push %r13");
@@ -194,7 +148,7 @@ void kpanic(size_t address) {
 	asm volatile ("push %rcx");
 	asm volatile ("push %rbx");
 	asm volatile ("push %rax");
-	uint64_t temp = address ? address : (uint64_t) __builtin_return_address(0);
+	uint64_t temp = __builtin_return_address(0);
 	ttyFgCol = COLOR_RED;
 	// RIP
 	fbPrint("KERNEL PANIC!\nrip: ");

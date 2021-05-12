@@ -71,7 +71,7 @@ void fbDrawIcon() {
 			for (uint16_t x = 0; x < ICON_WIDTH; x++) {
 				uint8_t blend = iconData[x + y * ICON_WIDTH];
 				uint8_t iblend = 255 - iconData[x + y * ICON_WIDTH];
-				uint32_t alt = altBuf[framebufWidth - ICON_WIDTH + x + y * framebufWidth];
+				uint32_t alt = fbGet(framebufWidth - ICON_WIDTH + x, y);
 				uint8_t _red = (alt >> 16) & 0xff;
 				uint8_t _grn = (alt >>  8) & 0xff;
 				uint8_t _blu = (alt >>  0) & 0xff;
@@ -100,9 +100,10 @@ void fbSetup() {
 	for (uint16_t y = 0; y < framebufHeight; y ++) {
 		for (uint16_t x = 0; x < framebufWidth; x ++) {
 			uint32_t color = 0;
-			uint16_t _x = framebufWidth - x - 1;
-			uint16_t _y = framebufHeight - y - 1;
-			uint8_t red = 255 - sisqrt(x * x + y * y) * 192 / framebufWidth;
+			uint16_t _x = framebufWidth - x;
+			uint16_t ___x = x + 1;
+			uint16_t _y = framebufHeight - y;
+			uint8_t red = 255 - sisqrt(___x * ___x + y * y) * 192 / framebufWidth;
 			int16_t _green = sisqrt(_x * _x + y * y) * 400 / framebufWidth;
 			uint8_t green = _green > 255 ? 511-_green : _green;
 			uint8_t blue = 255 - (_x + _y) * 128 / framebufWidth;
@@ -137,6 +138,9 @@ void fbMagicRect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
 }
 
 void fbPutc(char text) {
+	if (ttyXPos >= ttyMaxX) {
+		fbNewln();
+	}
 	if (text == '\n') {
 		if (ttyLastChar != '\r') {
 			fbNewln();
