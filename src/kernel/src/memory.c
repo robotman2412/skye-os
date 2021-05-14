@@ -97,7 +97,7 @@ void setupMemoryMap(struct stivale2_mmap_entry *stEntries, size_t stEntriesLen) 
 		kpanic();
 	}
 	// First fill the area with zero.
-	for (size_t i = 0; i < (requiredFreeSize + 0xfff) & ~0xff; i++) {
+	for (size_t i = 0; i < ((requiredFreeSize + 0xfff) & ~0xfff); i++) {
 		((uint8_t*) pmmEntryLand)[i] = 0;
 	}
 	// Now, set up the entire table shits.
@@ -140,7 +140,7 @@ void setupMemoryMap(struct stivale2_mmap_entry *stEntries, size_t stEntriesLen) 
 			// Other entries.
 			size_t entryLen = stEntry->length;
 			if (stEntry->base & 0xfff) {
-				entryLen = (entryLen + stEntry->base + 0xfff) & ~0xfff - stEntry->base;
+				entryLen = ((entryLen + stEntry->base + 0xfff) & ~0xfff) - stEntry->base;
 			} else if (entryLen & 0xfff) {
 				entryLen = (entryLen + 0xfff) & ~0xfff;
 			}
@@ -187,9 +187,48 @@ void setupMemoryMap(struct stivale2_mmap_entry *stEntries, size_t stEntriesLen) 
 	lastPmmResv = &initialResv;
 }
 
+static void printMemory(size_t total, size_t avl) {
+	size_t out0, out1;
+	uint8_t rem0, rem1;
+	char *fmt0, *fmt1;
+	if (total > 0x40000000) { // 1Gb
+		out0 = total * 10 / 0x40000000;
+		fmt0 = "Gb";
+	} else if (total > 0x100000) { // 1Mb
+		out0 = total * 10 / 0x100000;
+		fmt0 = "Mb";
+	} else if (total > 0x400) { // 1Kb
+		out0 = total * 10 / 0x400;
+		fmt0 = "Kb";
+	} else {
+		out0 = total * 10;
+		fmt0 = "b";
+	}
+	rem0 = out0 % 10;
+	out0 /= 10;
+	if (avl > 0x40000000) { // 1Gb
+		out1 = avl * 10 / 0x40000000;
+		fmt1 = "Gb";
+	} else if (avl > 0x100000) { // 1Mb
+		out1 = avl * 10 / 0x100000;
+		fmt1 = "Mb";
+	} else if (avl > 0x400) { // 1Kb
+		out1 = avl * 10 / 0x400;
+		fmt1 = "Kb";
+	} else {
+		out1 = avl * 10;
+		fmt1 = "b";
+	}
+	rem1 = out1 % 10;
+	out1 /= 10;
+	logkf("System has %zd.%d%s memory, %zd.%d%s usable.\n", out0, rem0, fmt0, out1, rem1, fmt1);
+}
+
 void printPmm() {
 	// Go over the map.
 	struct pmm_entry *next = firstPmmEntry;
+	size_t usable;
+	size_t total;
 	while (next) {
 		logk("");
 		fbPuthex(next->base, 16);
@@ -201,8 +240,15 @@ void printPmm() {
 		fbPutc(next->type & PMM_RESVD ? 'R' : '-');
 		fbPutc(next->type & PMM_META  ? 'M' : '-');
 		fbNewln();
+		if (!(next->type & PMM_USED)) {
+			usable += next->length;
+			total += next->length;
+		} else if (!(next->type & PMM_RESVD)) {
+			total += next->length;
+		}
 		next = next->next;
 	}
+	printMemory(total, usable);
 }
 
 // Whether or not this stivale2 entry is usable memory.
@@ -243,19 +289,19 @@ char pmm_isStCounted(struct stivale2_mmap_entry *stEntry) {
 			return 1;
 			break;
 		case (STIVALE2_MMAP_RESERVED):
-			return 1;
+			return 0;
 			break;
 		case (STIVALE2_MMAP_ACPI_RECLAIMABLE):
-			return 0;
+			return 1;
 			break;
 		case (STIVALE2_MMAP_ACPI_NVS):
 			return 0;
 			break;
 		case (STIVALE2_MMAP_BAD_MEMORY):
-			return 1;
+			return 0;
 			break;
 		case (STIVALE2_MMAP_BOOTLOADER_RECLAIMABLE):
-			return 0;
+			return 1;
 			break;
 		case (STIVALE2_MMAP_KERNEL_AND_MODULES):
 			return 1;
@@ -339,7 +385,7 @@ struct pmm_entry *pmm_alloc(size_t len) {
 struct pmm_entry *pmm_allocAt(size_t address, size_t len) {
 	if (address & 0xfff) return NULL;
 	size_t numBlocks = (len + 0x0fff) / 0x1000;
-	size_t foundBlocks = 0;
+	//size_t foundBlocks = 0;
 	struct pmm_entry *bestSpace = NULL; // Best match for amount of space desired.
 	struct pmm_entry *next = firstPmmEntry;
 	// Iterate over entries.
@@ -427,7 +473,7 @@ static void pmm_mergeNext(struct pmm_entry *block) {
 		size_t endAddr = block->base + block->length;
 		struct pmm_entry *next = block->next;
 		if (next && endAddr == next->base) {
-			if (next->type == FREE && block->type == FREE || next->owner != 0 && next->owner == block->owner) {
+			if ((next->type == FREE && block->type == FREE) || (next->owner != 0 && next->owner == block->owner)) {
 				block->length += next->length;
 				block->next = next->next;
 				if (block->next) block->next->prev = block;
@@ -446,7 +492,7 @@ static void pmm_mergePrev(struct pmm_entry *block) {
 	while (1) {
 		struct pmm_entry *prev = block->prev;
 		if (prev && block->base == prev->base + prev->length) {
-			if (prev->type == FREE && block->type == FREE || prev->owner != 0 && prev->owner == block->owner) {
+			if ((prev->type == FREE && block->type == FREE) || (prev->owner != 0 && prev->owner == block->owner)) {
 				block->length += prev->length;
 				block->base = prev->base;
 				block->prev = prev->prev;

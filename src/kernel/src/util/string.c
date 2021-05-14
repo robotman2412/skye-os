@@ -4,7 +4,7 @@
 
 // Because i have absolutely no libraries, i need to re-implement this.
 
-void *memchr(const void *str, int c, size_t num) {
+const void *memchr(const void *str, int c, size_t num) {
 	if (str == NULL) return NULL;
 	while (num > 0) {
 		if (*(uint8_t*)str == (uint8_t) c) {
@@ -26,7 +26,7 @@ int memcmp(const void *a, const void *b, size_t num) {
 	return 0;
 }
 
-void *memcpy(const void *dest, const void* src, size_t num) {
+void *memcpy(void *dest, const void* src, size_t num) {
 	if (dest == NULL || src == NULL) return NULL;
 	// TODO: see if there is some hardware for this?
 	if (src > dest) {
@@ -42,7 +42,7 @@ void *memcpy(const void *dest, const void* src, size_t num) {
 	return dest;
 }
 
-void *memmove(const void *dest, const void* src, size_t num) {
+void *memmove(void *dest, const void* src, size_t num) {
 	return memcpy(dest, src, num);
 }
 
@@ -61,6 +61,7 @@ char *strcat(char *dest, const char *src) {
 	size_t srcLen = strlen(src);
 	memcpy(&dest[destLen], src, srcLen);
 	dest[destLen+srcLen] = 0;
+	return dest;
 }
 
 char *strncat(char *dest, const char *src, size_t num) {
@@ -70,9 +71,10 @@ char *strncat(char *dest, const char *src, size_t num) {
 	if (srcLen > num) srcLen = num;
 	memcpy(&dest[destLen], src, srcLen);
 	dest[destLen+srcLen] = 0;
+	return dest;
 }
 
-char *strchr(const char *str, int c) {
+const char *strchr(const char *str, int c) {
 	if (str == NULL) return NULL;
 	while (*str) {
 		if (*str == c) {
@@ -118,8 +120,13 @@ char *strcpy(char *dest, const char *src) {
 char *strncpy(char *dest, const char *src, size_t num) {
 	if (dest == NULL || src == NULL) return NULL;
 	size_t len = strlen(src);
-	if (len > num) len = num;
-	return memcpy(dest, src, len);
+	if (len < num) {
+		memcpy(dest, src, len);
+		memset(&dest[len], 0, num - len);
+		return dest;
+	} else {
+		return memcpy(dest, src, num);
+	}
 }
 
 // Number of characters for which a never matches characters in b.
@@ -158,7 +165,7 @@ size_t strlen(const char *str) {
 }
 
 // First character in a matching any in b.
-char *strpbrk(const char *a, const char *b) {
+const char *strpbrk(const char *a, const char *b) {
 	if (a == NULL || b == NULL) return NULL;
 	size_t bLen = strlen(b);
 	while (*a) {
@@ -169,9 +176,9 @@ char *strpbrk(const char *a, const char *b) {
 	return NULL;
 }
 
-char *strrchr(const char *str, int c) {
+const char *strrchr(const char *str, int c) {
 	if (str == NULL) return NULL;
-	char *lastOccurance = NULL;
+	const char *lastOccurance = NULL;
 	while (*str) {
 		if (*str == c) lastOccurance = str;
 		str ++;
@@ -203,7 +210,7 @@ size_t strspn(const char *a, const char *b) {
 	return num;
 }
 
-char *strstr(const char *haystack, const char *needle) {
+const char *strstr(const char *haystack, const char *needle) {
 	if (haystack == NULL || needle == NULL) return NULL;
 	size_t needleIndex = 0;
 	while (*haystack) {

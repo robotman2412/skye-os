@@ -15,6 +15,11 @@ void timerSetup() {
 		pitSetup();
 		logk("Using PIT for timers.\n");
 	}
+	isSetup = 1;
+}
+
+char isTimerSetup() {
+	return isSetup;
 }
 
 void resetWatchdog() {

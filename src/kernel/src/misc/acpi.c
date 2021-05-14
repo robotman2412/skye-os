@@ -1,7 +1,8 @@
 
 #include "acpi.h"
+#include "heap.h"
 #include "string.h"
-#include "kernel.h"
+#include "logging.h"
 #include "stivale2.h"
 
 char isAcpiV2;
@@ -11,7 +12,7 @@ static struct ext_rsdp_descriptor *rsdp;
 static char chksum(void *ptr, size_t length) {
 	uint8_t *verify = (uint8_t *) ptr;
 	uint16_t chksum = 0;
-	for (int i = 0; i < length; i++) {
+	for (size_t i = 0; i < length; i++) {
 		chksum += verify[i];
 	}
 	return !(chksum & 0xff);
@@ -45,6 +46,7 @@ void *getAcpiTable(char *signature) {
 		struct acpi_std_header *rsdt = (struct acpi_std_header *) (uint64_t) rsdp->rsdtAddress;
 		struct acpi_std_header *header;
 		uint64_t *addresses = ((void *) rsdt) + sizeof(struct acpi_std_header);
+		// TODO
 	} else {
 		struct acpi_std_header *rsdt = (struct acpi_std_header *) (uint64_t) rsdp->rsdtAddress;
 		struct acpi_std_header *header;

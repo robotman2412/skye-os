@@ -1,0 +1,3 @@
+#!/bin/bash
+
+gdb --se skyekernel.elf -ex "layout src" -ex "target remote :1234"

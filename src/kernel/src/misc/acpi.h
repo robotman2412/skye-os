@@ -4,8 +4,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "kernel.h"
-#include "heap.h"
 #include "stivale2.h"
 
 #define STRUCT_RSDP_SIGNATURE "RSP PTR "

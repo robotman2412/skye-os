@@ -26,7 +26,11 @@ char *msprintf(char *format, ...);
 
 void logk(char *message);
 void logkf(char *format, ...);
+void errk(char *message);
+void errkf(char *format, ...);
 void warnk(char *message);
 void warnkf(char *format, ...);
+void debugk(char *message);
+void debugkf(char *format, ...);
 
 #endif //LOGGING_H

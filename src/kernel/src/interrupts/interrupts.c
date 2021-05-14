@@ -31,6 +31,8 @@ static struct lidt_struct {
 	uint64_t base;
 } __attribute__((packed)) lidt;
 
+static void(*timerInterruptHandler)(void) = NULL;
+
 void setupInterrupts() {
 	// Set interrupt defaults.
 	for (int i = 0; i < 256; i++) {
@@ -56,9 +58,9 @@ void setupInterrupts() {
 	// Double fault.
 	setInterrupt(&idtTable[8], &irq08, IRQ_MODE_INTERRUPT);
 	// Coprocessor segment overrun.
-	//setInterrupt(&idtTable[9], &irq09, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[9], &irq09, IRQ_MODE_INTERRUPT);
 	// Invalid TSS
-	//setInterrupt(&idtTable[10], &irq0A, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[10], &irq0A, IRQ_MODE_INTERRUPT);
 	// Segment not present.
 	setInterrupt(&idtTable[11], &irq0B, IRQ_MODE_INTERRUPT);
 	// Stack-segment fault.
@@ -68,7 +70,7 @@ void setupInterrupts() {
 	// Page fault.
 	setInterrupt(&idtTable[14], &irq0E, IRQ_MODE_INTERRUPT);
 	// Reserved.
-	//setInterrupt(&idtTable[15], &irq0F, IRQ_MODE_INTERRUPT);
+	setInterrupt(&idtTable[15], &irq0F, IRQ_MODE_INTERRUPT);
 	
 	asm volatile ("sidt %0" : "=m" (lidt));
 	
@@ -77,6 +79,12 @@ void setupInterrupts() {
 	lidt.base = (size_t) &idtTable;
 	
 	asm volatile ("lidt %0" :: "m" (lidt));
+}
+
+void setTimerInterruptHandler(void(*handler)(void)) {
+	asm volatile ("cli");
+	timerInterruptHandler = handler;
+	asm volatile ("sti");
 }
 
 void setInterrupt(struct idt_entry *idt, void(*handler)(struct interrupt_frame*), char mode) {

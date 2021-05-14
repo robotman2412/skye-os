@@ -117,11 +117,11 @@ static void checkFree(struct heap_desc *desc) {
 	}
 	if (addr + totalLength < nextAddr + 0x1000) return;
 	size_t removable = addr + totalLength - nextAddr;
-	if (removable & 0xfff != 0 && removable & 0xfff < MIN_HEAP_SECT_SIZE) {
+	if ((removable & 0xfff) != 0 && (removable & 0xfff) < MIN_HEAP_SECT_SIZE) {
 		removable = (removable & ~0xfff) - 0x1000;
 	}
 	if (removable < 0x1000) return;
-	if (desc == firstHeapDesc || addr & 0xfff) {
+	if (desc == firstHeapDesc || (addr & 0xfff)) {
 		desc->length = nextAddr - addr - sizeof(struct heap_desc);
 		if (removable & 0xfff) {
 			struct heap_desc *next = (struct heap_desc *) (nextAddr + (removable & ~0xfff));
@@ -149,7 +149,7 @@ int kfree(void *ptr) {
 		return 0;
 	}
 	desc->flags &= 0xfe;
-	if (desc->prev && !(desc->prev->flags & HEAP_IS_USED) && &((uint8_t *)desc->prev)[desc->prev->length + sizeof(struct heap_desc)] == desc) {
+	if (desc->prev && !(desc->prev->flags & HEAP_IS_USED) && &((uint8_t *)desc->prev)[desc->prev->length + sizeof(struct heap_desc)] == (uint8_t *) desc) {
 		desc->prev->length += sizeof(struct heap_desc) + desc->length;
 		desc->magic = 0;
 		desc->prev->next = desc->next;
@@ -157,7 +157,7 @@ int kfree(void *ptr) {
 		else lastHeapDesc = desc->prev;
 		desc = desc->prev;
 	}
-	if (desc->next && !(desc->next->flags & HEAP_IS_USED) && &((uint8_t *)desc)[desc->length + sizeof(struct heap_desc)] == desc->next) {
+	if (desc->next && !(desc->next->flags & HEAP_IS_USED) && &((uint8_t *)desc)[desc->length + sizeof(struct heap_desc)] == (uint8_t *) desc->next) {
 		desc->length += sizeof(struct heap_desc) + desc->next->length;
 		desc->next->magic = 0;
 		desc->next = desc->next->next;

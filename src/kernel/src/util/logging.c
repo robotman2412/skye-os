@@ -33,7 +33,7 @@ char *va_msprintf(char *fmt, va_list args) {
 	char yesbuf[22];
 	char *offs = fmt;
 	while (*offs) {
-		char *next = strchr(offs, '%');
+		char *next = (char *) strchr(offs, '%');
 		if (!next) {
 			msp_append(&outbuf, offs, strlen(offs));
 			break;
@@ -113,20 +113,22 @@ char *va_msprintf(char *fmt, va_list args) {
 }
 
 static void logTimer(char *out) {
-	//static uint64_t nanos = 0;
-	//nanos += 23000;
-	uint64_t nanos = hpet_getNanos();
+	if (!isTimerSetup()) {
+		memcpy(out, "     .   ", 9UL);
+		return;
+	}
+	uint64_t nanos = getNanos();
 	uint64_t micros = nanos / 1000;
 	uint64_t millis = micros / 1000;
 	micros %= 1000;
 	char buf[22];
 	ultoa(buf, millis);
-	padn(buf, ' ', 4);
-	memcpy(out, buf, 4);
-	out[4] = '.';
+	padn(buf, ' ', 5);
+	memcpy(out, buf, 5);
+	out[5] = '.';
 	ultoa(buf, micros);
-	padn(buf, '0', 4);
-	memcpy(&out[5], buf, 4);
+	padn(buf, '0', 3);
+	memcpy(&out[6], buf, 3);
 }
 
 void logk(char *message) {
@@ -138,11 +140,35 @@ void logk(char *message) {
 	fbPrint(message);
 }
 
-void warnk(char *message) {
+void errk(char *message) {
+	char buf[] = "[   0.0000] ";
+	logTimer(&buf[1]);
 	ttyFgCol = COLOR_GREEN;
-	fbPrint("[   0.0000] ");
+	fbPrint(buf);
 	ttyFgCol = COLOR_RED;
+	fbPrint("[E] ");
+	ttyFgCol = COLOR_WHITE;
+	fbPrint(message);
+}
+
+void warnk(char *message) {
+	char buf[] = "[   0.0000] ";
+	logTimer(&buf[1]);
+	ttyFgCol = COLOR_GREEN;
+	fbPrint(buf);
+	ttyFgCol = COLOR_YELLOW;
 	fbPrint("[W] ");
+	ttyFgCol = COLOR_WHITE;
+	fbPrint(message);
+}
+
+void debugk(char *message) {
+	char buf[] = "[   0.0000] ";
+	logTimer(&buf[1]);
+	ttyFgCol = COLOR_GREEN;
+	fbPrint(buf);
+	ttyFgCol = COLOR_BLUE;
+	fbPrint("[D] ");
 	ttyFgCol = COLOR_WHITE;
 	fbPrint(message);
 }
@@ -156,6 +182,15 @@ void logkf(char *format, ...) {
 	kfree(vec);
 }
 
+void errkf(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	char *vec = va_msprintf(format, args);
+	va_end(args);
+	errk(vec);
+	kfree(vec);
+}
+
 void warnkf(char *format, ...) {
 	va_list args;
 	va_start(args, format);
@@ -165,4 +200,12 @@ void warnkf(char *format, ...) {
 	kfree(vec);
 }
 
+void debugkf(char *format, ...) {
+	va_list args;
+	va_start(args, format);
+	char *vec = va_msprintf(format, args);
+	va_end(args);
+	debugk(vec);
+	kfree(vec);
+}
 

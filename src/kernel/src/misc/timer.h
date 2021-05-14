@@ -10,6 +10,7 @@
 
 void timerSetup();
 void resetWatchdog();
+char isTimerSetup();
 
 uint64_t getNanos();
 uint64_t getMillis();

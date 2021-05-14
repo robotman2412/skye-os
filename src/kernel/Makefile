@@ -6,7 +6,7 @@ KERNEL := skyekernel.elf
 CC := x86_64-elf-gcc
 
 # OK flag.
-CFLAGS := -Wall -Wno-unused-parameter -Wextra -O2 -pipe
+CFLAGS := -Wall -Wno-unused-function -Wno-unused-parameter -Wextra -O2 -pipe
 
 # All subdirectories of source code, as include arguments.
 IDIRS  := $(shell find ./src/ -type d | sed -E 's|.*|-I\0|')

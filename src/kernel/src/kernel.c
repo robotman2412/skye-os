@@ -98,6 +98,7 @@ void _start(struct stivale2_struct *stivale2_struct) {
 	
 	fbSetup();
 	logk("Skye OS boot\n");
+	logk("https://github.com/robotman2412/skye-os\n");
 	logk("Memory map:\n");
 	printPmm();
 	
@@ -119,10 +120,6 @@ void _start(struct stivale2_struct *stivale2_struct) {
 #ifdef TESTING_H
 	doDebugTests();
 #endif
-	
-	// Waste some time.
-	for (size_t i = 0; i < 100000000; i++) fbSet(i & 0x3, 0, fbGet(i & 0x3, 0));
-	logk("TIME_TEST_LOL\n");
 	
 	// Fin.
 	asm ("cli");
@@ -148,7 +145,7 @@ void kpanic() {
 	asm volatile ("push %rcx");
 	asm volatile ("push %rbx");
 	asm volatile ("push %rax");
-	uint64_t temp = __builtin_return_address(0);
+	uint64_t temp = (uint64_t) __builtin_return_address(0);
 	ttyFgCol = COLOR_RED;
 	// RIP
 	fbPrint("KERNEL PANIC!\nrip: ");

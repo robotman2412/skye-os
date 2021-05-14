@@ -40,6 +40,21 @@ struct hpet_timer_config {
 	uint32_t supportedInterruptNumbers; // For each supported I/O APIC interrupt line, the corresponding bit is set.
 } __attribute__((packed));
 
+union hpet_timer_config_union {
+	struct hpet_timer_config fields;
+	uint64_t value;
+};
+
+union hpet_config_union {
+	struct hpet_config fields;
+	uint64_t value;
+};
+
+union hpet_capabilities_union {
+	struct hpet_capabilities fields;
+	uint64_t value;
+};
+
 struct hpet_address {
     uint8_t address_space_id;    // 0 - system memory, 1 - system I/O
     uint8_t register_bit_width;
@@ -66,5 +81,7 @@ struct acpi_hpet_table {
 char hpetSetup();
 
 uint64_t hpet_getNanos();
+
+void hpet_setTimer(uint8_t num, uint8_t doPeriodic, uint64_t nanos);
 
 #endif //HPET_H

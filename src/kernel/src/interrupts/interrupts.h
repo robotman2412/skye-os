@@ -10,10 +10,10 @@
 #define INTERRUPT_TYPE void
 
 struct interrupt_frame {
-    uint64_t rax, rbx, rcx, rdx, rbp, rsp, rsi, rdi;
+    uint64_t rax, rbx, rcx, rdx, rbp, rsp0, rsi, rdi;
     uint64_t r8,  r9,  r10, r11, r12, r13, r14, r15;
     uint64_t errorCode;
-    uint64_t rip, cs, rflags, rsp0, ss;
+    uint64_t rip, cs, rflags, rsp, ss;
 } __attribute__((packed));
 
 struct idt_entry {
@@ -30,9 +30,9 @@ void setupInterrupts();
 
 void setInterrupt(struct idt_entry *idt, void(*handler)(struct interrupt_frame*), char mode);
 
-extern uint64_t irqReturnAddr;
+void setTimerInterruptHandler(void(*handler)(void));
 
-extern void(*interruptTable[32])(void);
+extern uint64_t irqReturnAddr;
 
 INTERRUPT_TYPE irq00Handler(struct interrupt_frame* frame);
 INTERRUPT_TYPE irq01Handler(struct interrupt_frame* frame);

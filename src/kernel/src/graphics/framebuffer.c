@@ -92,6 +92,16 @@ void fbDrawIcon() {
 	}
 }
 
+static void fbMagicRect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
+	if (!altBuf) return;
+	for (uint16_t y = y0; y < y0 + h; y ++) {
+		for (uint16_t x = x0; x < x0 + w; x ++) {
+			if ((fbGet(x, y) & 0xffffff) != 0) continue;
+			fbSet(x, y, altBuf[x + y * framebufWidth]);
+		}
+	}
+}
+
 void fbSetup() {
 	struct pmm_entry *got = pmm_alloc(framebufWidth * framebufHeight * sizeof(uint32_t));
 	altBuf = (uint32_t *) got->base;
@@ -124,16 +134,6 @@ void fbPrint(char *text) {
 	while (*text) {
 		fbPutc(*text);
 		text ++;
-	}
-}
-
-void fbMagicRect(uint16_t x0, uint16_t y0, uint16_t w, uint16_t h) {
-	if (!altBuf) return;
-	for (uint16_t y = y0; y < y0 + h; y ++) {
-		for (uint16_t x = x0; x < x0 + w; x ++) {
-			if (fbGet(x, y) & 0xffffff != 0) continue;
-			fbSet(x, y, altBuf[x + y * framebufWidth]);
-		}
 	}
 }
 
@@ -170,12 +170,12 @@ void fbNewln() {
 	ttyXPos = 0;
 	ttyYPos ++;
 	if (ttyYPos >= ttyMaxY) {
-		int dest = 0;
-		int numScrolled = 2;
-		int src = framebufWidth * (doubleTextSize ? FONT_HEIGHT2 : FONT_HEIGHT) * numScrolled;
-		int len = framebufWidth * framebufHeight - src;
+		size_t dest = 0;
+		size_t numScrolled = 2;
+		size_t src = framebufWidth * (doubleTextSize ? FONT_HEIGHT2 : FONT_HEIGHT) * numScrolled;
+		size_t len = framebufWidth * framebufHeight - src;
 		if (altBuf) {
-			for (int i = 0; i < len; i++) {
+			for (size_t i = 0; i < len; i++) {
 				uint32_t val = framebuf[src + i];
 				if (val & 0xff000000) {
 					framebuf[dest + i] = val;
@@ -184,19 +184,19 @@ void fbNewln() {
 				}
 			}
 		} else {
-			for (int i = 0; i < len; i++) {
+			for (size_t i = 0; i < len; i++) {
 				uint32_t val = framebuf[src + i];
 				framebuf[dest + i] = val;
 			}
 		}
 		ttyYPos = ttyMaxY - numScrolled;
 		if (altBuf) {
-			for (int i = len; i < framebufWidth * framebufHeight; i++) {
+			for (size_t i = len; i < framebufWidth * framebufHeight; i++) {
 				uint32_t val = altBuf[dest + i];
 				framebuf[dest + i] = val;
 			}
 		} else {
-			for (int i = len; i < framebufWidth * framebufHeight; i++) {
+			for (size_t i = len; i < framebufWidth * framebufHeight; i++) {
 				framebuf[dest + i] = ttyBgCol;
 			}
 		}
@@ -261,13 +261,13 @@ void fbFill(uint32_t color) {
 }
 
 void fbSet(int x, int y, uint32_t color) {
-	if (x >= 0 && y >= 0 && x < framebufWidth && y < framebufHeight) {
+	if (x >= 0 && y >= 0 && x < (int) framebufWidth && y < (int) framebufHeight) {
 		framebuf[x + y * framebufWidth] = color;
 	}
 }
 
 uint32_t fbGet(int x, int y) {
-	if (x >= 0 && y >= 0 && x < framebufWidth && y < framebufHeight) {
+	if (x >= 0 && y >= 0 && x < (int) framebufWidth && y < (int) framebufHeight) {
 		return framebuf[x + y * framebufWidth];
 	} else {
 		return 0;
